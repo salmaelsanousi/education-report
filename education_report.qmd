@@ -1,0 +1,221 @@
+---
+title: "Access to Education & School Infrastructure: A Global Disparity"
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+    toc: true
+    toc-depth: 8
+    theme: cosmo
+    smooth-scroll: true
+    highlight-style: atom-one-dark
+    jupyter: python3
+
+
+---
+# Introduction
+
+**Education is a right**, not a privilege. Yet, millions of children around the world are denied access to basic schooling or learning infrastructure.
+
+::: {.class}
+ _"Education is the most powerful weapon you can use to change the world."_  
+— Nelson Mandela
+:::
+<img src="/Users/pc/Desktop/education/reasons.png" width="750" 
+     height="100">
+---
+This report highlights:
+- Countries with the highest out-of-school rates\n
+- Links between wealth and education access\n
+- Time trends in school infrastructure
+---
+# Regional Analysis of Out-of-School Rates
+Education accessibility differs drastically across regions. In this section, we explore the average out-of-school rate by global region in 2020, highlighting where the education gap is the widest and where progress has been made.
+```{python}
+import pandas as pd
+from plotnine import ggplot, aes, geom_bar, coord_flip, labs, theme_minimal,  scale_fill_brewer, theme
+
+# dataset
+newdata = pd.read_csv("/Users/pc/Desktop/education/unicef_indicator_regions122.csv")
+
+# Filter for 2020
+filtered = newdata[newdata['time_period'] == 2020]
+region_avg = filtered.groupby('region', as_index=False)['number'].mean()
+from plotnine import scale_fill_manual
+
+purple_shades = ['#6C2856', '#6C2856', '#9C5878', '#B07C92', '#87326C']
+
+(ggplot(region_avg, aes(x='reorder(region, number)', y='number', fill='region')) +
+ geom_bar(stat='identity') +
+ coord_flip() +
+ labs(title='Average Out-of-School Rate by Region (2020)',
+      x='Region', y='Out-of-School Rate (%)') +
+ scale_fill_manual(values=purple_shades) +
+ theme_minimal() + theme(figure_size=(10, 6)))
+```
+## Top 10 Countries with the Highest Out-of-School Rates
+Aound the world education
+```{python}
+import pandas as pd
+from plotnine import ggplot, aes, geom_bar, coord_flip, labs, theme_minimal
+
+# data
+df = pd.read_csv("/Users/pc/Desktop/education/unicef_indicator_2.csv")
+df_2020 = df[(df["time_period"] == 2020) & (df["sex"] == "Total")]
+df_2020_cleaned = df_2020[["country", "obs_value"]].dropna()
+top10 = df_2020_cleaned.sort_values(by="obs_value", ascending=False).head(10)
+
+# Plot
+(ggplot(top10, aes(x='reorder(country, obs_value)', y='obs_value')) +
+ geom_bar(stat='identity', fill='#6C2856') +
+ coord_flip() +
+ labs(title='Top 10 Countries with Highest Out-of-School Rates (2020)',
+      x='Country', y='Out-of-School Rate (%)') +
+ theme_minimal())
+```
+
+## Top 5 Countries from African Region
+Africa carries the heaviest burden when it comes to children missing out on school.
+Among all African nations, these five stand out with the highest out-of-school rates — painting a vivid picture of the challenges faced on the continent.
+South Sudan, sadly, tops the list  highlighting the urgent need for stronger support. This highlights the higest content with the highest rate of out of school. Africa remains the most affected continent regarding school access. 
+
+```{python}
+import pandas as pd
+from plotnine import ggplot, aes, geom_line, labs, theme_minimal, scale_fill_brewer
+
+## datasets
+edu = pd.read_csv("/Users/pc/Desktop/education/unicef_indicator_2.csv")
+region_info = pd.read_csv("/Users/pc/Desktop/education/unicef_indicator_regions122.csv")
+
+# Merge 
+edu = edu.merge(region_info[['country', 'region']], on='country', how='left')
+edu_2020 = edu[ (edu["sex"] == "Total")]
+edu_2020 = edu_2020[['country', 'obs_value', 'region']].dropna()
+edu_2020['obs_value'] = pd.to_numeric(edu_2020['obs_value'], errors='coerce')
+
+# 10 countries
+top10 = edu_2020.sort_values(by='obs_value', ascending=False).head(10)
+
+#  Plot
+(ggplot(top10, aes(x='reorder(country, obs_value)', y='obs_value', fill='country')) +
+ geom_bar(stat='identity') +
+ coord_flip() +
+ labs(title='Top 5 African Countries with Highest Out-of-School Rates (2020)',
+      x='Country', y='Out-of-School Rate (%)') +
+ scale_fill_manual(values=['#6C2856', '#6C2856', '#9C5878', '#B07C92', '#87326C']) +
+ theme_minimal())
+```
+
+## Out-of-School Rate vs. GDP per Capita 
+Economic prosperity and education often go hand-in-hand./n
+Money matters — and so does education.
+In this plot, we explore how a country's wealth (measured by GDP per capita) connects with school attendance rates.
+Do richer countries truly offer more children the chance to learn? Let’s find out. This scatterplot examines the relationship between a country's wealth (GDP per capita) and the percentage of out-of-school children, revealing stark inequalities.
+```{python} 
+
+import pandas as pd
+from plotnine import ggplot, aes, geom_point, labs, theme_minimal, geom_smooth
+
+# datasets
+edu = pd.read_csv("/Users/pc/Desktop/education/unicef_indicator_2.csv")
+gdp = pd.read_csv("/Users/pc/Desktop/education/unicef_metadata.csv")
+
+# Filter 
+edu_total = edu[edu["sex"] == "Total"]
+edu_total = edu_total[["country", "time_period", "obs_value"]].dropna()
+edu_total.columns = ["country", "year", "out_of_school_rate"]
+
+edu_latest = edu_total.sort_values('year', ascending=False).drop_duplicates('country')
+
+gdp = gdp[["country", "GDP per capita (constant 2015 US$)", "year"]].dropna()
+gdp_latest = gdp.sort_values('year', ascending=False).drop_duplicates('country')
+gdp_latest.columns = ["country", "gdp_per_capita", "year"]
+# Merge datasets
+merged = pd.merge(edu_latest, gdp_latest, on="country").dropna()
+
+# Plot
+(ggplot(merged, aes(x='gdp_per_capita', y='out_of_school_rate')) +
+ geom_point(size=2, color="#6C2856") +
+ geom_smooth(method='lm', color="#B491A8", se=False) +  
+ labs(title='Out-of-School Rate vs. GDP per Capita',
+      x='GDP per Capita (USD)', y='Out-of-School Rate (%)') +
+ theme_minimal())
+```
+
+## Out-of-School Rate Trends (2010–2021) 
+Over the last decade, how has the fight for education shifted?
+This chart follows the journey of different regions from 2010 to 2021, showing the ups and downs in school enrollment rates.
+Some regions have made real strides while others still have a long road ahead.
+```{python}
+import pandas as pd
+import plotly.express as px
+
+#datasets
+edu = pd.read_csv("/Users/pc/Desktop/education/unicef_indicator_2.csv")
+gdp = pd.read_csv("/Users/pc/Desktop/education/unicef_metadata.csv")
+regions = pd.read_csv("/Users/pc/Desktop/education/unicef_indicator_regions122.csv")  
+edu_total = edu[edu["sex"] == "Total"][["country", "time_period", "obs_value"]].dropna()
+edu_total.columns = ["country", "year", "out_of_school_rate"]
+
+
+edu_latest = edu_total.sort_values('year', ascending=False).drop_duplicates('country')
+
+gdp = gdp[["country", "GDP per capita (constant 2015 US$)", "year"]].dropna()
+gdp_latest = gdp.sort_values('year', ascending=False).drop_duplicates('country')
+gdp_latest.columns = ["country", "gdp_per_capita", "year_gdp"]
+
+# Merge 
+merged = pd.merge(edu_latest, gdp_latest, on="country", how="inner")
+merged = merged.merge(regions[['country', 'region']], on='country', how='left')
+
+fig = px.scatter(
+    merged,
+    x='gdp_per_capita',
+    y='out_of_school_rate',
+    color='region',  
+    hover_name='country', 
+    hover_data={
+        'gdp_per_capita': True,
+        'out_of_school_rate': True,
+        'region': True,
+        'year': True
+    },
+    title='Out-of-School Rate vs. GDP per Capita (Latest Available Year)',
+    labels={
+        'gdp_per_capita': 'GDP per Capita (USD)',
+        'out_of_school_rate': 'Out-of-School Rate (%)'
+    },
+    color_discrete_sequence=px.colors.qualitative.Set2
+)
+
+fig.update_traces(marker=dict(size=8))  
+fig.update_layout(template="plotly_white") 
+fig.show()
+
+```
+
+## Global Map of Out-of-School Rates (2020)
+Finally, a global choropleth map allows us to visually explore out-of-school rates across countries. Hovering over each country provides real-time insight into where efforts are most urgently needed.
+
+```{python}
+import pandas as pd
+import plotly.express as px
+
+edu = pd.read_csv("/Users/pc/Desktop/education/new_data_withperc.csv")
+
+# Filter for 2020
+newdata_2020 = newdata[newdata['time_period'] == 2020]
+newdata_2020 = newdata_2020[['country', 'number']].dropna()
+newdata_2020.columns = ['country', 'numberperc']
+
+fig = px.choropleth(
+    newdata_2020,
+    locations="country",
+    locationmode="country names",
+    color="numberperc",
+    color_continuous_scale="Purples",
+    title="Out-of-School Rates Globally (2020)",
+)
+fig.show()
+
+```
